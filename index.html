@@ -2,8 +2,9 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Daily Target</title>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
@@ -23,63 +24,92 @@
         }
 
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        
+        html, body { 
+            height: 100%; 
+            height: 100dvh; /* Dynamic Viewport Height for Mobile */
+            margin: 0; padding: 0; 
+            overflow: hidden; 
+        }
+
         body {
-            font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text);
-            margin: 0; padding: 0; height: 100vh; display: none; flex-direction: column; overflow: hidden;
+            font-family: 'Plus Jakarta Sans', sans-serif; 
+            background: var(--bg); 
+            color: var(--text);
+            display: none; /* Hidden until passcode */
+            flex-direction: column;
         }
 
         header {
-            padding: 10px 20px; background: var(--card); border-bottom: 1px solid var(--border);
-            display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;
+            padding: calc(10px + env(safe-area-inset-top)) 15px 10px 15px; 
+            background: var(--card); 
+            border-bottom: 1px solid var(--border);
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            flex-shrink: 0;
+            z-index: 100;
         }
 
-        .hud-group { display: flex; gap: 15px; align-items: center; }
-        .lvl-box { background: var(--bg); padding: 4px 10px; border-radius: 8px; border: 1px solid var(--border); text-align: center; }
-        .lvl-num { font-weight: 800; color: var(--accent); font-size: 1rem; }
-        .sql-status { display: flex; align-items: center; gap: 6px; font-size: 10px; font-weight: 800; color: var(--sql-off); text-transform: uppercase; }
+        .hud-group { display: flex; gap: 12px; align-items: center; }
+        .lvl-box { background: var(--bg); padding: 4px 8px; border-radius: 8px; border: 1px solid var(--border); text-align: center; }
+        .lvl-num { font-weight: 800; color: var(--accent); font-size: 0.9rem; }
+        
+        .sql-status { display: flex; align-items: center; gap: 5px; font-size: 9px; font-weight: 800; color: var(--sql-off); }
         .sql-status.online { color: var(--sql-on); }
-        .dot { width: 7px; height: 7px; background: currentColor; border-radius: 50%; box-shadow: 0 0 5px currentColor; }
+        .dot { width: 6px; height: 6px; background: currentColor; border-radius: 50%; }
 
-        .viewport { flex-grow: 1; overflow: auto; scroll-behavior: smooth; position: relative; }
+        .viewport { 
+            flex-grow: 1; 
+            overflow: auto; 
+            scroll-behavior: smooth; 
+            position: relative;
+            background: var(--bg);
+        }
+
         table { border-collapse: collapse; width: max-content; }
-        th, td { border: 1px solid var(--border); padding: 12px; text-align: center; width: 65px; }
+        th, td { border: 1px solid var(--border); padding: 10px; text-align: center; width: 60px; }
         
         thead th { position: sticky; top: 0; background: var(--card); z-index: 30; }
         td:first-child, th:first-child { 
             position: sticky; left: 0; background: var(--card); z-index: 35; 
-            text-align: left; width: 230px; border-right: 3px solid var(--accent); 
+            text-align: left; width: 210px; border-right: 3px solid var(--accent); 
         }
 
         .active-row { background: rgba(37, 99, 235, 0.05) !important; }
         [data-theme="dark"] .active-row { background: rgba(0, 212, 255, 0.06) !important; }
-        .active-cell { outline: 2px solid var(--accent); outline-offset: -2px; }
         .weekend { background: var(--weekend) !important; }
         .today-col { background: var(--today) !important; }
         
         input[type="checkbox"] { width: 22px; height: 22px; cursor: pointer; accent-color: var(--accent); }
-        .time-label { font-size: 0.65rem; opacity: 0.5; display: block; font-family: monospace; }
-        .day-meta { font-size: 8px; display: block; opacity: 0.5; margin-top: 3px; }
+        .time-label { font-size: 0.6rem; opacity: 0.5; display: block; font-family: monospace; }
+        .day-meta { font-size: 8px; display: block; opacity: 0.5; }
 
-        .controls { display: flex; gap: 8px; align-items: center; }
-        .icon-btn { background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 7px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: bold; }
+        .controls { display: flex; gap: 6px; align-items: center; }
+        .icon-btn { background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 11px; font-weight: bold; }
         
         .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; display: none; justify-content: center; align-items: center; backdrop-filter: blur(4px); }
-        .modal-content { background: var(--card); padding: 25px; border-radius: 15px; width: 90%; max-width: 400px; border: 1px solid var(--border); }
-        .modal-content input, .modal-content select { width: 100%; padding: 10px; margin: 8px 0; background: var(--bg); border: 1px solid var(--border); color: var(--text); border-radius: 6px; }
+        .modal-content { background: var(--card); padding: 25px; border-radius: 15px; width: 90%; max-width: 400px; }
     </style>
 </head>
 <body id="appBody">
 
     <header>
         <div class="hud-group">
-            <div class="lvl-box"><span class="lvl-num" id="monkLevel">1</span><span style="font-size: 7px; display: block; opacity: 0.6;">LVL</span></div>
-            <div style="text-align: center;"><span id="streakVal" style="color:#ff4757; font-weight:900; font-size:1.1rem; display:block;">0</span><span style="font-size:7px; opacity:0.6; font-weight:800;">STREAK</span></div>
+            <div class="lvl-box">
+                <span class="lvl-num" id="monkLevel">1</span>
+                <span style="font-size: 7px; display: block; opacity: 0.6; font-weight: 800;">LVL</span>
+            </div>
+            <div style="text-align: center;">
+                <span id="streakVal" style="color:#ff4757; font-weight:900; font-size:1.1rem; display:block;">0</span>
+                <span style="font-size:7px; opacity:0.6; font-weight:800; text-transform: uppercase;">Streak</span>
+            </div>
         </div>
 
         <div class="controls">
             <div id="sqlStatus" class="sql-status"><div class="dot"></div> SQL</div>
             <select id="monthSelect" class="icon-btn"></select>
-            <select id="yearSelect" class="icon-btn" style="width:70px"></select>
+            <select id="yearSelect" class="icon-btn" style="width:65px"></select>
             <button onclick="document.getElementById('editor').style.display='flex'" class="icon-btn">⚙️</button>
             <button onclick="toggleTheme()" class="icon-btn">🌓</button>
         </div>
@@ -92,22 +122,22 @@
         </table>
     </div>
 
+    <!-- Modal remains the same -->
     <div class="modal" id="editor">
         <div class="modal-content">
-            <h3 style="margin-top:0">Edit Target</h3>
-            <select id="taskSelect" onchange="loadEditorFields()"></select>
-            <input type="text" id="editName" placeholder="Task Name">
-            <input type="text" id="editRange" placeholder="Time Range (00:00–00:00)">
-            <input type="text" id="editStart" placeholder="Start Time (00:00)">
-            <button onclick="saveConfig()" style="width:100%; padding:10px; background:var(--accent); color:#fff; font-weight:800; border:none; border-radius:6px; margin-top:10px;">SAVE CHANGES</button>
-            <button onclick="document.getElementById('editor').style.display='none'" style="width:100%; margin-top:5px; background:none; border:none; color:#777;">Cancel</button>
+            <h3 style="margin-top:0">Config Target</h3>
+            <select id="taskSelect" style="width:100%; padding:10px; margin-bottom:10px;" onchange="loadEditorFields()"></select>
+            <input type="text" id="editName" placeholder="Task Name" style="width:100%; padding:10px; margin-bottom:10px;">
+            <input type="text" id="editRange" placeholder="Time Range" style="width:100%; padding:10px; margin-bottom:10px;">
+            <input type="text" id="editStart" placeholder="Start Time" style="width:100%; padding:10px; margin-bottom:10px;">
+            <button onclick="saveConfig()" style="width:100%; padding:10px; background:var(--accent); color:#fff; border:none; border-radius:6px; font-weight:bold;">SAVE</button>
+            <button onclick="document.getElementById('editor').style.display='none'" style="width:100%; margin-top:10px; background:none; border:none; color:#888;">Cancel</button>
         </div>
     </div>
 
     <script>
-        // --- 1. MASKED CONFIGURATION ---
         const MASKED_URL = "VTJGc2RHVmtYMS80ZnBQdnhxTXhUbVRMUVZYYVgxa0JOemlvNFZzckxaUUFyT0hBOWViMXJHRzNjR3lFYjF5WENjN2Fhc0RCUjJhMW0vejVyUG55Smc9PQ=="; 
-        const MASKED_KEY = "VTJGc2RHVmtYMSs5eFlVVTdCRys0MzNFYVdOZTZwSnJ2M1VOOFVvTVhPWjFYdXU1YVJ4TDZFbjA2bVdkYlFYRFNZaXByVHBxTHpzYnlLaUY0dzVpMmc9PQ==";
+        const MASKED_KEY = "VTJGc2RHVmtYMSs5eFlVVTdCRys0MzNFYVdOZTZwSnJ2M1VOOFVvTVhPWjFYdXU1YVJ4TDZFbjA2bVdkYlFYRFNZaXByVHBxTHpzYnlLaUY0dzVpMmc9PQ=="; 
 
         const defaultSchedule = [
             { id: 0, start_time: "07:20", time_range: "07:20–07:40", task_name: "Wake up + hygiene" },
@@ -138,14 +168,14 @@
         let habits = {}, schedule = [...defaultSchedule];
 
         window.onload = async () => {
-            const pass = prompt("Enter Passcode:");
+            const pass = prompt("Passcode:");
             try {
                 const url = CryptoJS.AES.decrypt(atob(MASKED_URL), pass).toString(CryptoJS.enc.Utf8);
                 const key = CryptoJS.AES.decrypt(atob(MASKED_KEY), pass).toString(CryptoJS.enc.Utf8);
                 _supabase = supabase.createClient(url, key);
                 document.getElementById('appBody').style.display = 'flex';
                 initApp();
-            } catch (e) { alert("Denied."); window.location.href = "about:blank"; }
+            } catch (e) { alert("Access Denied."); window.location.href = "about:blank"; }
         };
 
         async function initApp() {
@@ -155,10 +185,9 @@
             for(let y=2024; y<=2030; y++) ys.add(new Option(y, y));
             ms.value = curMonth; ys.value = curYear;
             ms.onchange = () => { curMonth = parseInt(ms.value); curYear = parseInt(ys.value); refresh(); };
-            
             if(localStorage.getItem('theme') === 'dark') document.body.setAttribute('data-theme', 'dark');
             render(); refresh();
-            setInterval(updateHUD, 30000);
+            setInterval(updateHUD, 60000);
         }
 
         async function refresh() {
@@ -169,7 +198,6 @@
                 ]);
                 if (sRes.data && sRes.data.length > 0) schedule = sRes.data;
                 else await _supabase.from('schedule_config').upsert(defaultSchedule);
-
                 habits = {}; hRes.data?.forEach(i => habits[i.id] = i.status);
                 document.getElementById('sqlStatus').classList.add('online');
                 render(); updateStats(); updateHUD(true);
@@ -220,12 +248,12 @@
             document.querySelectorAll('tr').forEach(r => r.classList.remove('active-row'));
             const now = new Date();
             const time = now.getHours().toString().padStart(2, '0') + ":" + now.getMinutes().toString().padStart(2, '0');
-            let currId = -1;
-            schedule.forEach(s => { if(time >= s.start_time) currId = s.id; });
-            if(currId !== -1) {
-                const row = document.getElementById(`row-${currId}`);
+            let curr = schedule[0];
+            schedule.forEach(s => { if(time >= s.start_time) curr = s; });
+            if(curr) {
+                const row = document.getElementById(`row-${curr.id}`);
                 if(row) row.classList.add('active-row');
-                if(isInit) setTimeout(() => { document.getElementById('todayMark')?.scrollIntoView({ behavior: 'smooth', inline: 'center' }); }, 600);
+                if(isInit) setTimeout(() => { document.getElementById('todayMark')?.scrollIntoView({ behavior: 'smooth', inline: 'center' }); }, 800);
             }
         }
 
@@ -261,15 +289,13 @@
 
         async function saveConfig() {
             const id = document.getElementById('taskSelect').value;
-            const updatedTask = {
+            await _supabase.from('schedule_config').upsert({
                 id: parseInt(id),
                 task_name: document.getElementById('editName').value,
                 time_range: document.getElementById('editRange').value,
                 start_time: document.getElementById('editStart').value
-            };
-            await _supabase.from('schedule_config').upsert(updatedTask);
-            document.getElementById('editor').style.display = 'none';
-            refresh();
+            });
+            document.getElementById('editor').style.display = 'none'; refresh();
         }
     </script>
 </body>
