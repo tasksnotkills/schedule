@@ -5,37 +5,64 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <title>Daily Target</title>
+    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
 
     <style>
-        :root { --bg: #f8fafc; --card: #ffffff; --text: #1e293b; --accent: #2563eb; --border: #e2e8f0; --weekend: #f1f5f9; --today: rgba(37, 99, 235, 0.08); --sql-off: #ef4444; --sql-on: #10b981; }
-        [data-theme="dark"] { --bg: #1a1a1a; --card: #242424; --text: #e2e8f0; --accent: #00d4ff; --border: #333333; --weekend: #1c1c1c; --today: rgba(0, 212, 255, 0.1); }
+        :root {
+            --bg: #f8fafc; --card: #ffffff; --text: #1e293b; --accent: #2563eb;
+            --border: #e2e8f0; --weekend: #f1f5f9; --today: rgba(37, 99, 235, 0.08);
+            --sql-off: #ef4444; --sql-on: #10b981;
+        }
+        [data-theme="dark"] {
+            --bg: #1a1a1a; --card: #242424; --text: #e2e8f0; --accent: #00d4ff;
+            --border: #333333; --weekend: #1c1c1c; --today: rgba(0, 212, 255, 0.1);
+        }
+
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 0; height: 100vh; display: none; flex-direction: column; overflow: hidden; }
-        header { padding: 10px 15px; background: var(--card); border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
-        .hud-group { display: flex; gap: 12px; align-items: center; }
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text);
+            margin: 0; padding: 0; height: 100vh; display: none; flex-direction: column; overflow: hidden;
+        }
+
+        header {
+            padding: 10px 20px; background: var(--card); border-bottom: 1px solid var(--border);
+            display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;
+        }
+
+        .hud-group { display: flex; gap: 15px; align-items: center; }
         .lvl-box { background: var(--bg); padding: 4px 10px; border-radius: 8px; border: 1px solid var(--border); text-align: center; }
         .lvl-num { font-weight: 800; color: var(--accent); font-size: 1rem; }
-        .session-pill { background: var(--bg); padding: 6px 14px; border-radius: 20px; border: 1px solid var(--accent); font-size: 0.75rem; font-weight: 800; color: var(--accent); display: flex; align-items: center; gap: 8px; }
-        .pulse { width: 7px; height: 7px; background: var(--accent); border-radius: 50%; animation: pulse 2s infinite; }
-        @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.3; transform: scale(1.2); } }
-        .sql-pulse { display: flex; align-items: center; gap: 5px; font-size: 9px; font-weight: 800; color: var(--sql-off); }
-        .sql-pulse.online { color: var(--sql-on); }
-        .dot { width: 6px; height: 6px; background: currentColor; border-radius: 50%; }
+        .sql-status { display: flex; align-items: center; gap: 6px; font-size: 10px; font-weight: 800; color: var(--sql-off); text-transform: uppercase; }
+        .sql-status.online { color: var(--sql-on); }
+        .dot { width: 7px; height: 7px; background: currentColor; border-radius: 50%; box-shadow: 0 0 5px currentColor; }
+
         .viewport { flex-grow: 1; overflow: auto; scroll-behavior: smooth; position: relative; }
         table { border-collapse: collapse; width: max-content; }
         th, td { border: 1px solid var(--border); padding: 12px; text-align: center; width: 65px; }
-        td:first-child, th:first-child { position: sticky; left: 0; background: var(--card); z-index: 35; text-align: left; width: 220px; border-right: 3px solid var(--accent); }
+        
+        thead th { position: sticky; top: 0; background: var(--card); z-index: 30; }
+        td:first-child, th:first-child { 
+            position: sticky; left: 0; background: var(--card); z-index: 35; 
+            text-align: left; width: 230px; border-right: 3px solid var(--accent); 
+        }
+
         .active-row { background: rgba(37, 99, 235, 0.05) !important; }
+        [data-theme="dark"] .active-row { background: rgba(0, 212, 255, 0.06) !important; }
+        .active-cell { outline: 2px solid var(--accent); outline-offset: -2px; }
         .weekend { background: var(--weekend) !important; }
         .today-col { background: var(--today) !important; }
+        
         input[type="checkbox"] { width: 22px; height: 22px; cursor: pointer; accent-color: var(--accent); }
         .time-label { font-size: 0.65rem; opacity: 0.5; display: block; font-family: monospace; }
-        .controls { display: flex; gap: 5px; align-items: center; }
-        .icon-btn { background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: bold; }
+        .day-meta { font-size: 8px; display: block; opacity: 0.5; margin-top: 3px; }
+
+        .controls { display: flex; gap: 8px; align-items: center; }
+        .icon-btn { background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 7px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: bold; }
+        
         .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; display: none; justify-content: center; align-items: center; backdrop-filter: blur(4px); }
         .modal-content { background: var(--card); padding: 25px; border-radius: 15px; width: 90%; max-width: 400px; border: 1px solid var(--border); }
         .modal-content input, .modal-content select { width: 100%; padding: 10px; margin: 8px 0; background: var(--bg); border: 1px solid var(--border); color: var(--text); border-radius: 6px; }
@@ -46,13 +73,13 @@
     <header>
         <div class="hud-group">
             <div class="lvl-box"><span class="lvl-num" id="monkLevel">1</span><span style="font-size: 7px; display: block; opacity: 0.6;">LVL</span></div>
-            <div style="text-align: center;"><span id="streakVal" style="color:#ff4757; font-weight:900; font-size:1rem; display:block;">0</span><span style="font-size:7px; opacity:0.6; font-weight:800;">STREAK</span></div>
+            <div style="text-align: center;"><span id="streakVal" style="color:#ff4757; font-weight:900; font-size:1.1rem; display:block;">0</span><span style="font-size:7px; opacity:0.6; font-weight:800;">STREAK</span></div>
         </div>
-        <div class="session-pill"><div class="pulse"></div><span id="hudTask">SYNCING...</span></div>
+
         <div class="controls">
-            <div id="sqlStatus" class="sql-pulse"><div class="dot"></div> SQL</div>
+            <div id="sqlStatus" class="sql-status"><div class="dot"></div> SQL</div>
             <select id="monthSelect" class="icon-btn"></select>
-            <select id="yearSelect" class="icon-btn" style="width:65px"></select>
+            <select id="yearSelect" class="icon-btn" style="width:70px"></select>
             <button onclick="document.getElementById('editor').style.display='flex'" class="icon-btn">⚙️</button>
             <button onclick="toggleTheme()" class="icon-btn">🌓</button>
         </div>
@@ -67,37 +94,39 @@
 
     <div class="modal" id="editor">
         <div class="modal-content">
-            <h3 style="margin-top:0">Config Target</h3>
+            <h3 style="margin-top:0">Edit Target</h3>
             <select id="taskSelect" onchange="loadEditorFields()"></select>
             <input type="text" id="editName" placeholder="Task Name">
-            <input type="text" id="editRange" placeholder="Time Range">
-            <input type="text" id="editStart" placeholder="Start Time">
-            <button onclick="saveConfig()" style="width:100%; padding:10px; background:var(--accent); color:#fff; font-weight:800; border:none; border-radius:6px; margin-top:10px;">SAVE</button>
+            <input type="text" id="editRange" placeholder="Time Range (00:00–00:00)">
+            <input type="text" id="editStart" placeholder="Start Time (00:00)">
+            <button onclick="saveConfig()" style="width:100%; padding:10px; background:var(--accent); color:#fff; font-weight:800; border:none; border-radius:6px; margin-top:10px;">SAVE CHANGES</button>
             <button onclick="document.getElementById('editor').style.display='none'" style="width:100%; margin-top:5px; background:none; border:none; color:#777;">Cancel</button>
         </div>
     </div>
 
     <script>
+        // --- 1. MASKED CONFIGURATION ---
         const MASKED_URL = "VTJGc2RHVmtYMS80ZnBQdnhxTXhUbVRMUVZYYVgxa0JOemlvNFZzckxaUUFyT0hBOWViMXJHRzNjR3lFYjF5WENjN2Fhc0RCUjJhMW0vejVyUG55Smc9PQ=="; 
         const MASKED_KEY = "VTJGc2RHVmtYMSs5eFlVVTdCRys0MzNFYVdOZTZwSnJ2M1VOOFVvTVhPWjFYdXU1YVJ4TDZFbjA2bVdkYlFYRFNZaXByVHBxTHpzYnlLaUY0dzVpMmc9PQ==";
+
         const defaultSchedule = [
             { id: 0, start_time: "07:20", time_range: "07:20–07:40", task_name: "Wake up + hygiene" },
             { id: 1, start_time: "07:40", time_range: "07:40–07:55", task_name: "Yoga / Light Exercise" },
-            { id: 2, start_time: "07:55", time_range: "07:55–08:55", task_name: "Study" },
-            { id: 3, start_time: "08:55", time_range: "08:55–09:15", task_name: "Short break / reset" },
-            { id: 4, start_time: "09:15", time_range: "09:15–09:40", task_name: "Study" },
-            { id: 5, start_time: "09:40", time_range: "09:40–09:55", task_name: "Short break / reset" },
-            { id: 6, start_time: "09:55", time_range: "09:55–10:25", task_name: "Breakfast" },
-            { id: 7, start_time: "10:25", time_range: "10:25–11:55", task_name: "Study" },
-            { id: 8, start_time: "11:55", time_range: "11:55–12:15", task_name: "Short break / reset" },
-            { id: 9, start_time: "12:15", time_range: "12:15–13:45", task_name: "Study" },
-            { id: 10, start_time: "13:45", time_range: "13:45–14:00", task_name: "Short break / reset" },
-            { id: 11, start_time: "14:00", time_range: "14:00–14:30", task_name: "Lunch" },
-            { id: 12, start_time: "14:40", time_range: "14:40–16:00", task_name: "Study" },
-            { id: 13, start_time: "16:00", time_range: "16:00–16:20", task_name: "Short break / reset" },
-            { id: 14, start_time: "16:20", time_range: "16:20–17:50", task_name: "Study" },
+            { id: 2, start_time: "07:55", time_range: "07:55–08:55", task_name: "Study Block 1" },
+            { id: 3, start_time: "08:55", time_range: "08:55–09:05", task_name: "Short break / reset" },
+            { id: 4, start_time: "09:05", time_range: "09:05–09:25", task_name: "Breakfast" },
+            { id: 5, start_time: "09:25", time_range: "09:25–09:50", task_name: "Study Block 2" },
+            { id: 6, start_time: "09:50", time_range: "09:50–10:05", task_name: "Short break / reset" },
+            { id: 7, start_time: "10:05", time_range: "10:05–11:35", task_name: "Study Block 3" },
+            { id: 8, start_time: "11:35", time_range: "11:35–11:55", task_name: "Short break / reset" },
+            { id: 9, start_time: "11:55", time_range: "11:55–13:25", task_name: "Study Block 4" },
+            { id: 10, start_time: "13:25", time_range: "13:25–13:40", task_name: "Short break / reset" },
+            { id: 11, start_time: "13:40", time_range: "13:40–14:10", task_name: "Lunch" },
+            { id: 12, start_time: "14:20", time_range: "14:20–15:40", task_name: "Study Block 5" },
+            { id: 13, start_time: "15:40", time_range: "15:40–16:00", task_name: "Short break / reset" },
+            { id: 14, start_time: "16:00", time_range: "16:00–17:30", task_name: "Study Block 6" },
             { id: 15, start_time: "18:30", time_range: "18:30–19:15", task_name: "Dinner / rest" },
-            { id: 16, start_time: "19:15", time_range: "19:15–20:45", task_name: "Study" },
+            { id: 16, start_time: "19:15", time_range: "19:15–20:45", task_name: "Study Block 7" },
             { id: 17, start_time: "20:45", time_range: "20:45–21:00", task_name: "Short break / reset" },
             { id: 18, start_time: "21:00", time_range: "21:00–22:30", task_name: "Study (Revision)" },
             { id: 19, start_time: "22:30", time_range: "22:30–23:00", task_name: "Wind down" },
@@ -109,7 +138,7 @@
         let habits = {}, schedule = [...defaultSchedule];
 
         window.onload = async () => {
-            const pass = prompt("Passcode:");
+            const pass = prompt("Enter Passcode:");
             try {
                 const url = CryptoJS.AES.decrypt(atob(MASKED_URL), pass).toString(CryptoJS.enc.Utf8);
                 const key = CryptoJS.AES.decrypt(atob(MASKED_KEY), pass).toString(CryptoJS.enc.Utf8);
@@ -128,8 +157,7 @@
             ms.onchange = () => { curMonth = parseInt(ms.value); curYear = parseInt(ys.value); refresh(); };
             
             if(localStorage.getItem('theme') === 'dark') document.body.setAttribute('data-theme', 'dark');
-            render(); // Render defaults immediately
-            refresh();
+            render(); refresh();
             setInterval(updateHUD, 30000);
         }
 
@@ -192,12 +220,11 @@
             document.querySelectorAll('tr').forEach(r => r.classList.remove('active-row'));
             const now = new Date();
             const time = now.getHours().toString().padStart(2, '0') + ":" + now.getMinutes().toString().padStart(2, '0');
-            let curr = schedule[0];
-            schedule.forEach(s => { if(time >= s.start_time) curr = s; });
-            if(curr) {
-                const row = document.getElementById(`row-${curr.id}`);
+            let currId = -1;
+            schedule.forEach(s => { if(time >= s.start_time) currId = s.id; });
+            if(currId !== -1) {
+                const row = document.getElementById(`row-${currId}`);
                 if(row) row.classList.add('active-row');
-                document.getElementById('hudTask').innerText = curr.task_name.toUpperCase();
                 if(isInit) setTimeout(() => { document.getElementById('todayMark')?.scrollIntoView({ behavior: 'smooth', inline: 'center' }); }, 600);
             }
         }
